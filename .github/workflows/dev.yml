@@ -218,23 +218,23 @@ jobs:
         run: docker build ./python-app -t dev-test-image:${{ env.IMAGE_TAG }}
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ BUILD NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       - name: Create Telegram notification
-        if: always()
+        if: always() && github.event_name == 'push'
         uses: haya14busa/action-cond@v1
         id: telegram
         with:
           cond: ${{ job.status == 'failure' }}
-          if_true:  "*${{ github.actor }}*'s *{{ github.workflow }}* code build has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-          if_false: "*${{ github.actor }}*'s *{{ github.workflow }}* code was built and pushed to *${{ env.DEV_REPOSITORY }}* ECR repository and will be deployed to *{{ github.workflow }}*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          if_true:  "*${{ github.actor }}*'s *${{ github.workflow }}* code build has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          if_false: "*${{ github.actor }}*'s *${{ github.workflow }}* code was built and pushed to *${{ env.DEV_REPOSITORY }}* ECR repository and will be deployed to *${{ github.workflow }}*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
       - name: Create Gmail notification
-        if: always()
+        if: always() && github.event_name == 'push'
         uses: haya14busa/action-cond@v1
         id: mail
         with:
           cond: ${{ job.status == 'failure' }}
-          if_true:  "${{ github.actor }}'s {{ github.workflow }} code build has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          if_false: "${{ github.actor }}'s {{ github.workflow }} code was built and pushed to ${{ env.DEV_REPOSITORY }} ECR repository and will be deployed to {{ github.workflow }}.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          if_true:  "${{ github.actor }}'s ${{ github.workflow }} code build has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if_false: "${{ github.actor }}'s ${{ github.workflow }} code was built and pushed to ${{ env.DEV_REPOSITORY }} ECR repository and will be deployed to ${{ github.workflow }}.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
       - name: Blau Telegram notification
-        if: always()
+        if: always() && github.event_name == 'push'
         uses: appleboy/telegram-action@master
         with: 
          to: ${{ secrets.TELEGRAM_TO }}
@@ -243,7 +243,7 @@ jobs:
          format: "markdown"
          disable_web_page_preview: true
       - name: Blau Gmail notification
-        if: always()
+        if: always() && github.event_name == 'push'
         uses: dawidd6/action-send-mail@v3
         with:
           username: ${{ secrets.MAIL_USERNAME }}
