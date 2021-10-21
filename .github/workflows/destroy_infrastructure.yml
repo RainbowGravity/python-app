@@ -25,7 +25,7 @@ jobs:
     name: Waiting for approval
     runs-on: ubuntu-latest
     environment:
-      name: release
+      name: production
     steps:
     - name: Send Telegram notification
       uses: appleboy/telegram-action@master
