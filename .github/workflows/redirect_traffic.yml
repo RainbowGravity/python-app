@@ -1,0 +1,102 @@
+name: Redirect Traffic 
+env:                                      
+  DEV_REPOSITORY: python-app-dev       
+  IMAGE_TAG: "${{ github.sha }}"
+on: 
+  workflow_dispatch:
+    inputs:
+      traffic:
+        description: 'Traffic'
+        required: true 
+      reason:
+        description: 'Reason'
+        required: true 
+  
+jobs: 
+  redirect_notification:
+    name: Traffic Notification 
+    uses: RainbowGravity/python-app/.github/workflows/notifications.yml@main
+    with: 
+      message: "*${{ github.actor }}* requested traffic redirection to '*${{ github.event.inputs.traffic }}*' in *${{ github.workflow }}* because of '*${{ github.event.inputs.reason }}*'.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      body:    "${{ github.actor }} requested traffic redirection to '${{ github.event.inputs.traffic }}' in *${{ github.workflow }}* because of '${{ github.event.inputs.reason }}'.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      subject: Notification about ${{ github.workflow }} redirection
+    secrets: 
+      token: ${{ secrets.TELEGRAM_TOKEN }}
+      to: ${{ secrets.TELEGRAM_TO }}
+      mail_username: ${{ secrets.MAIL_USERNAME }}
+      mail_password: ${{ secrets.MAIL_PASSWORD }}  
+ 
+  redirect_traffic:
+    name: Redirect Traffic
+    needs: redirect_notification
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+    defaults:
+      run:
+        working-directory: Cluster/AWS/Instances
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: RainbowGravity/infrastructure
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws-region: ${{ secrets.AWS_REGION }}  
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+      - name: Terraform fmt
+        id: fmt
+        run: terraform fmt -check
+        continue-on-error: true
+      - name: Terraform Init
+        id: init
+        run: terraform init
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+      - name: Terraform Apply
+        id: traffic
+        run: terraform apply -var="Traffic=${{ github.event.inputs.traffic }}" -auto-approve
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ TRAFFIC REDIRECTION NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      - name: Create Telegram notification
+        if: always()
+        uses: haya14busa/action-cond@v1
+        id: telegram
+        with:
+          cond: ${{ job.status == 'failure' }}
+          if_true:  "*${{ github.actor }}*'s *${{ github.workflow }}* has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          if_false: "Traffic was successfully redirected to '*${{ github.event.inputs.traffic }}*' by *${{ github.actor }}*. \n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      - name: Create Gmail notification
+        if: always()
+        uses: haya14busa/action-cond@v1
+        id: mail
+        with:
+          cond: ${{ job.status == 'failure' }}
+          if_true:  "${{ github.actor }}'s ${{ github.workflow }} has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if_false: "Traffic was successfully redirected to '${{ github.event.inputs.traffic }}' by ${{ github.actor }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"    
+      - name: Send Telegram notification
+        if: always()
+        uses: appleboy/telegram-action@master
+        with: 
+         to: ${{ secrets.TELEGRAM_TO }}
+         token: ${{ secrets.TELEGRAM_TOKEN }}
+         args: ${{ steps.telegram.outputs.value }} 
+         format: "markdown"
+         disable_web_page_preview: true
+      - name: Send Gmail notification
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          server_address: smtp.gmail.com
+          server_port: 465
+          subject: ${{ github.job }} job of ${{ github.repository }} in ${{ github.workflow }} has ${{ job.status }}
+          to: ${{ secrets.MAIL_USERNAME }}
+          from: "Exam homework notifications"
+          secure: true
+          body: ${{ steps.mail.outputs.value }} 

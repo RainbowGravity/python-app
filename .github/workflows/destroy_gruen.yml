@@ -1,0 +1,117 @@
+name: Destroy Gruen
+
+on:
+  workflow_run:
+    workflows: ["Production env"]
+    branches: 
+      - main
+    types: 
+      - completed
+
+jobs:    
+  change_traffic:
+    name: Change Traffic
+    runs-on: ubuntu-latest
+    environment: 
+      name: production
+    defaults:
+      run:
+        working-directory: Cluster/AWS/Instances
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: RainbowGravity/infrastructure 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws-region: ${{ secrets.AWS_REGION }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+      - name: Terraform fmt
+        id: fmt
+        run: terraform fmt -check
+      - name: Terraform Init
+        id: init
+        run: terraform init
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+      - name: Terraform traffic
+        id: traffic
+        run: terraform apply -var="Traffic=blue" -auto-approve
+
+  destroy:
+    name: Destroy Gruen
+    runs-on: ubuntu-latest
+    needs: change_traffic
+    defaults:
+      run:
+        working-directory: Cluster/AWS/ECS_Green
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        repository: RainbowGravity/infrastructure
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }} 
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+    - name: Terraform fmt
+      id: fmt
+      run: terraform fmt -check
+    - name: Terraform Init
+      id: init
+      run: terraform init
+    - name: Terraform Validate
+      id: validate
+      run: terraform validate -no-color
+    - name: Terraform destroy
+      id: destroy
+      run: terraform destroy -auto-approve
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ PRODUCTION DEPLOY NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    - name: Create Telegram notification
+      if: always()
+      uses: haya14busa/action-cond@v1
+      id: telegram
+      with:
+        cond: ${{ job.status == 'failure' }}
+        if_true:  "*${{ github.workflow }}* has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+        if_false: "*Gruen env* was ${{ job.status }}fully destroyed. \n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+    - name: Create Gmail notification
+      if: always()
+      uses: haya14busa/action-cond@v1
+      id: mail
+      with:
+        cond: ${{ job.status == 'failure' }}
+        if_true:  "${{ github.actor }}'s ${{ github.workflow }} deployment has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        if_false: "Gruen env was ${{ job.status }}fully destroyed.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"    
+    - name: Send Telegram notification
+      if: always()
+      uses: appleboy/telegram-action@master
+      with: 
+       to: ${{ secrets.TELEGRAM_TO }}
+       token: ${{ secrets.TELEGRAM_TOKEN }}
+       args: ${{ steps.telegram.outputs.value }} 
+       format: "markdown"
+       disable_web_page_preview: true
+    - name: Send Gmail notification
+      if: always()
+      uses: dawidd6/action-send-mail@v3
+      with:
+        username: ${{ secrets.MAIL_USERNAME }}
+        password: ${{ secrets.MAIL_PASSWORD }}
+        server_address: smtp.gmail.com
+        server_port: 465
+        subject: ${{ github.job }} job of ${{ github.repository }} in ${{ github.workflow }} has ${{ job.status }}
+        to: ${{ secrets.MAIL_USERNAME }}
+        from: "Exam homework notifications"
+        secure: true
+        body: ${{ steps.mail.outputs.value }} 

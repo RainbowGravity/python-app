@@ -1,0 +1,64 @@
+name: Destroy Dev
+
+on: 
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Person'
+        required: true
+      reason:
+        description: 'Reason'
+        required: true 
+jobs:
+  notify:
+    name: Notify about destroy
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: send custom message with args
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TELEGRAM_TO }}
+        token: ${{ secrets.TELEGRAM_TOKEN }}
+        args: The ${{ inputs.name }} is trying to destroy dev because of ${{ inputs.reason }}. 
+
+  destroy:
+    name: Destroy Dev
+    runs-on: ubuntu-latest
+    environment: 
+      name: development
+    defaults:
+      run:
+        working-directory: Cluster/AWS/ECS_Dev
+    steps:
+      
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        repository: RainbowGravity/infrastructure
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+
+    - name: Terraform fmt
+      id: fmt
+      run: terraform fmt -check
+
+    - name: Terraform Init
+      id: init
+      run: terraform init
+
+    - name: Terraform Validate
+      id: validate
+      run: terraform validate -no-color
+
+    - name: Terraform destroy
+      id: destroy
+      run: terraform destroy -auto-approve

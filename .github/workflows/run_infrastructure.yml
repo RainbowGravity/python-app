@@ -1,0 +1,34 @@
+name: Run Infrastructure
+
+on: workflow_dispatch
+
+jobs:
+  infrastructure:
+    name: Start AWS ECS Cluster
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        terraform_working_dir: [Cluster/AWS/VPC, Cluster/AWS/Instances, Cluster/AWS/ECS_Blue]
+    defaults:
+      run: 
+        working-directory: ${{ matrix.terraform_working_dir }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+         repository: RainbowGravity/infrastructure
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+      - name: Terraform Init
+        id: init
+        run: terraform init
+      - name: Terraform Apply
+        id: apply
+        run: terraform apply -auto-approve
