@@ -6,7 +6,7 @@ This application was created as part of the DevOps exam. Application is very sim
 
 More interesting thing is a Github flow workflow created for deployment of this app.
 
-## About Github flow
+## About Gitflow
 
 Gitflow is a very complicated workflow with several long-live branches. There are Hotfix, Release, Develop and Main branches. State of the project is storing in these branches. 
 
