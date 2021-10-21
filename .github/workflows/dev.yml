@@ -144,29 +144,13 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ TESTS NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      - name: Create Telegram notification
-        if: always()
-        uses: haya14busa/action-cond@v1
-        id: telegram
-        with:
-          cond: ${{ github.event_name == 'push' }}
-          if_true:  "${{ github.job }} job of ${{ github.repository }} has *${{ job.status }}*\n\n*${{ github.actor }}*'s code test results for *${{ github.workflow }}* branch.\n${{ steps.line.outputs.line }}\n*dockerfilelint:*\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\n*mypy:*\n\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\n*pylint:*${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\n*Snyk Test:*${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\n*Snyk Code Test:*${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-          if_false: "${{ github.job }} job of ${{ github.repository }} has *${{ job.status }}*\n\n*${{ github.actor }}*'s code test results for *${{ github.workflow }}* branch.\n${{ steps.line.outputs.line }}\n*dockerfilelint:*\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\n*mypy:*\n\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\n*pylint:*${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\n*Snyk Test:*${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\n*Snyk Code Test:*${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\n[Link to the PR](https://github.com/${{ github.repository }}/pull/${{github.event.number}})\n\n[Link to the action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" 
-      - name: Create Gmail notification
-        if: always()
-        uses: haya14busa/action-cond@v1
-        id: mail
-        with:
-          cond: ${{ github.event_name == 'push' }}
-          if_true:  "${{ github.actor }}'s code test results for ${{ github.workflow }} branch.\n${{ steps.line.outputs.line }}\ndockerfilelint:\n\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\nmypy:\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\npylint:${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\nSnyk Test:${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\nSnyk Code Test:${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
-          if_false: "${{ github.actor }}'s code test results for ${{ github.workflow }} branch.\n${{ steps.line.outputs.line }}\ndockerfilelint:\n\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\nmypy:\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\npylint:${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\nSnyk Test:${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\nSnyk Code Test:${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\nhttps://github.com/${{ github.repository }}/pull/${{github.event.number}}\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
       - name: Send Telegram notification
         if: always()
         uses: appleboy/telegram-action@master
         with: 
          to: ${{ secrets.TELEGRAM_TO }}
          token: ${{ secrets.TELEGRAM_TOKEN }}
-         args: ${{ steps.telegram.outputs.value }} 
+         args: "${{ github.job }} job of ${{ github.repository }} for pull request #${{github.event.number}} has *${{ job.status }}*\n\n*${{ github.actor }}*'s code test results for *${{ github.workflow }}* branch.\n${{ steps.line.outputs.line }}\n*dockerfilelint:*\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\n*mypy:*\n\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\n*pylint:*${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\n*Snyk Test:*${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\n*Snyk Code Test:*${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\n[Link to the PR](https://github.com/${{ github.repository }}/pull/${{github.event.number}})\n\n[Link to the action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" 
          format: "markdown"
          disable_web_page_preview: true
       - name: Send Gmail notification
@@ -181,7 +165,7 @@ jobs:
           to: ${{ secrets.MAIL_USERNAME }}
           from: "Exam homework notifications"
           secure: true
-          body: ${{ steps.mail.outputs.value }}
+          body: "${{ github.actor }}'s code test results for pull request #${{github.event.number}} in ${{ github.workflow }} branch.\n${{ steps.line.outputs.line }}\ndockerfilelint:\n\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\nmypy:\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\npylint:${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\nSnyk Test:${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\nSnyk Code Test:${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\nhttps://github.com/${{ github.repository }}/pull/${{github.event.number}}\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
       - name: Create or Update Comment
         if: always()
         uses: peter-evans/create-or-update-comment@v1.4.5
