@@ -224,7 +224,7 @@ jobs:
         with:
           cond: ${{ job.status == 'failure' }}
           if_true:  "*${{ github.actor }}*'s *{{ github.workflow }}* Green code build has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-          if_false: "*${{ github.actor }}*'s *{{ github.workflow }}* code was builded and pushed to *${{ env.GRUEN_REPOSITORY }}* ECR repository. Waiting for your approval for *{{ github.workflow }}* deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          if_false: "*${{ github.actor }}*'s *{{ github.workflow }}* code was built and pushed to *${{ env.GRUEN_REPOSITORY }}* ECR repository. Waiting for your approval for *{{ github.workflow }}* deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
       - name: Create Gmail notification
         if: always()
         uses: haya14busa/action-cond@v1
@@ -232,7 +232,7 @@ jobs:
         with:
           cond: ${{ job.status == 'failure' }}
           if_true:  "${{ github.actor }}'s {{ github.workflow }} Green code build has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          if_false: "${{ github.actor }}'s {{ github.workflow }} code was builded and pushed to ${{ env.GRUEN_REPOSITORY }} ECR repository. Waiting for your approval for {{ github.workflow }} deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          if_false: "${{ github.actor }}'s {{ github.workflow }} code was built and pushed to ${{ env.GRUEN_REPOSITORY }} ECR repository. Waiting for your approval for {{ github.workflow }} deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
       - name: Blau Telegram notification
         if: always()
         uses: appleboy/telegram-action@master
