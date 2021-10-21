@@ -181,44 +181,37 @@ jobs:
 
   build_dev:
     name: Build Dev
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        if: github.event_name == 'push'
         uses: actions/checkout@v2
         with: 
           repository: RainbowGravity/infrastructure
       - name: Configure AWS credentials
-        if: github.event_name == 'push'
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
       - name: Login to Amazon ECR
-        if: github.event_name == 'push'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
       - name: Create amazon ECR Repository
         id: ecr
-        if: github.event_name == 'push'
         uses: int128/create-ecr-repository-action@v1
         with:
           repository: ${{ env.DEV_REPOSITORY }}
       - name: Checkout
         uses: actions/checkout@v2
       - name: Build and push image to Amazon ECR
-        if: github.event_name == 'push'
         id: build-image
         run: |
           docker build ./python-app -t ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
           docker push ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
-      - name: Test of the image building
-        if: github.event_name != 'push'
-        run: docker build ./python-app -t dev-test-image:${{ env.IMAGE_TAG }}
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ BUILD NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       - name: Create Telegram notification
-        if: always() && github.event_name == 'push'
+        if: always()
         uses: haya14busa/action-cond@v1
         id: telegram
         with:
@@ -226,7 +219,7 @@ jobs:
           if_true:  "*${{ github.actor }}*'s *${{ github.workflow }}* code build has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
           if_false: "*${{ github.actor }}*'s *${{ github.workflow }}* code was built and pushed to *${{ env.DEV_REPOSITORY }}* ECR repository and will be deployed to *${{ github.workflow }}*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
       - name: Create Gmail notification
-        if: always() && github.event_name == 'push'
+        if: always()
         uses: haya14busa/action-cond@v1
         id: mail
         with:
@@ -234,7 +227,7 @@ jobs:
           if_true:  "${{ github.actor }}'s ${{ github.workflow }} code build has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           if_false: "${{ github.actor }}'s ${{ github.workflow }} code was built and pushed to ${{ env.DEV_REPOSITORY }} ECR repository and will be deployed to ${{ github.workflow }}.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
       - name: Blau Telegram notification
-        if: always() && github.event_name == 'push'
+        if: always()
         uses: appleboy/telegram-action@master
         with: 
          to: ${{ secrets.TELEGRAM_TO }}
@@ -243,7 +236,7 @@ jobs:
          format: "markdown"
          disable_web_page_preview: true
       - name: Blau Gmail notification
-        if: always() && github.event_name == 'push'
+        if: always()
         uses: dawidd6/action-send-mail@v3
         with:
           username: ${{ secrets.MAIL_USERNAME }}
