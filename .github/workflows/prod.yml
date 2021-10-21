@@ -505,7 +505,7 @@ jobs:
     name: Deploy Blau
     needs: build_blau
     environment:
-      name: release
+      name: production
     runs-on: ubuntu-latest
     defaults:
       run:
