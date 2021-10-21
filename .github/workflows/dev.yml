@@ -39,7 +39,7 @@ jobs:
     uses: RainbowGravity/python-app/.github/workflows/notifications.yml@main
     with: 
       message: "*${{ github.actor }}* created a pull request #${{github.event.number}} in *${{ github.workflow }}*. Code is testing and terraform plan is running for *${{ github.workflow }}* deployment.\n\n[Link to the PR](https://github.com/${{ github.repository }}/pull/${{github.event.number}})\n\n[Link to the action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-      body: "${{ github.actor }} created a pull request in *${{ github.workflow }}*. Code is testing and terraform plan is running for ${{ github.workflow }} deployment.'${{ github.event.inputs.reason }}'.\n\nhttps://github.com/${{ github.repository }}/pull/${{github.event.number}}\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      body:  "${{ github.actor }} created a pull request #${{github.event.number}} in ${{ github.workflow }}.  Code is testing and terraform plan is running for ${{ github.workflow }} deployment.'${{ github.event.inputs.reason }}'.\n\nhttps://github.com/${{ github.repository }}/pull/${{github.event.number}}\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       subject: Notification about pull request in ${{ github.workflow }}
     secrets: 
       token: ${{ secrets.TELEGRAM_TOKEN }}
@@ -218,43 +218,43 @@ jobs:
         run: docker build ./python-app -t dev-test-image:${{ env.IMAGE_TAG }}
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ BUILD NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       - name: Create Telegram notification
-        if: always()
+        if: failure() || github.event_name != 'push'
         uses: haya14busa/action-cond@v1
         id: telegram
         with:
-          cond: ${{ job.status == 'failure' }}
-          if_true:  "*${{ github.actor }}*'s *{{ github.workflow }}* code build has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-          if_false: "*${{ github.actor }}*'s *{{ github.workflow }}* code was built and pushed to *${{ env.DEV_REPOSITORY }}* ECR repository and will be deployed to *{{ github.workflow }}*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          cond: ${{ github.event_name == 'push' }}
+          if_true: "*${{ github.actor }}*'s code build for *${{ github.workflow }}* has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          if_false: "*${{ github.actor }}*'s code build for pull request #${{github.event.number}} in *${{ github.workflow }}* has *${{ job.status }}*\n\n[Link to the PR](https://github.com/${{ github.repository }}/pull/${{github.event.number}})\n\n[Link to the action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" 
       - name: Create Gmail notification
-        if: always()
+        if: failure() || github.event_name != 'push'
         uses: haya14busa/action-cond@v1
         id: mail
         with:
-          cond: ${{ job.status == 'failure' }}
-          if_true:  "${{ github.actor }}'s {{ github.workflow }} code build has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          if_false: "${{ github.actor }}'s {{ github.workflow }} code was built and pushed to ${{ env.DEV_REPOSITORY }} ECR repository and will be deployed to {{ github.workflow }}.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-      - name: Blau Telegram notification
-        if: always()
+          cond: ${{ github.event_name == 'push' }}
+          if_true: "${{ github.actor }}'s code build for ${{ github.workflow }} has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if_false: "${{ github.actor }}'s code build for pull request #${{github.event.number}} in ${{ github.workflow }} has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/pull/${{github.event.number}}\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
+      - name: Send Telegram notification
+        if: failure() || github.event_name != 'push'
         uses: appleboy/telegram-action@master
         with: 
-         to: ${{ secrets.TELEGRAM_TO }}
-         token: ${{ secrets.TELEGRAM_TOKEN }}
-         args: "${{ steps.telegram.outputs.value }} "
-         format: "markdown"
-         disable_web_page_preview: true
-      - name: Blau Gmail notification
-        if: always()
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          args: "${{ steps.telegram.outputs.value }}"  
+          format: "markdown"
+          disable_web_page_preview: true
+      - name: Send Gmail notification
+        if: failure() || github.event_name != 'push'
         uses: dawidd6/action-send-mail@v3
         with:
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
           server_address: smtp.gmail.com
           server_port: 465
-          subject: Notification about merge to ${{ github.workflow }}
+          subject: "${{ github.workflow }}: ${{ github.job }} job of ${{ github.repository }} has ${{ job.status }}"
           to: ${{ secrets.MAIL_USERNAME }}
           from: "Exam homework notifications"
           secure: true
-          body: "${{ steps.mail.outputs.value }} "
+          body: "${{ steps.mail.outputs.value }}"
  
  
  # ============================================================================== TERRAFORM PLAN ==============================================================================
