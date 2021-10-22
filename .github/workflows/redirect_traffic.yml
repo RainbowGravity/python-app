@@ -28,10 +28,9 @@ jobs:
  
   redirect_traffic:
     name: Redirect Traffic
-    needs: redirect_notification
     runs-on: ubuntu-latest
     environment:
-      name: staging
+      name: production
     defaults:
       run:
         working-directory: Cluster/AWS/Instances
